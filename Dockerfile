@@ -2,7 +2,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+# 注: 不用 npm ci,因为仓库里没有 package-lock.json(文件太大无法通过 API 推送)
+RUN npm install --no-audit --no-fund
 COPY . .
 ARG VITE_GAME_SERVER_URL
 ENV VITE_GAME_SERVER_URL=${VITE_GAME_SERVER_URL}
