@@ -1,0 +1,24 @@
+services:
+  game-server:
+    build: ./server
+    container_name: feiqi-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+
+  web:
+    build:
+      context: .
+      args:
+        # 浏览器实际用来连接游戏服务器的地址。
+        # 本机体验：ws://localhost:3001
+        # 有域名+HTTPS：wss://你的域名:3001  或  wss://你的域名/ws（需配好 nginx 代理，见 DEPLOY.md）
+        VITE_GAME_SERVER_URL: ${VITE_GAME_SERVER_URL:-ws://localhost:3001}
+    container_name: feiqi-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - game-server
