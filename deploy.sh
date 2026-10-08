@@ -13,6 +13,9 @@
 # 可选：换端口（默认网页 8080，游戏服务 3001）
 #   WEB_PORT=80 GAME_PORT=4000 bash deploy.sh 1.2.3.4
 #
+# 可选：直接指定 WebSocket 地址（绑域名+HTTPS 时用）
+#   WS_URL=wss://game.example.com/ws bash deploy.sh game.example.com
+#
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -32,17 +35,22 @@ fi
 echo "Docker 就绪: $(docker --version)"
 
 echo "=== 2/4 确定服务器地址 ==="
-SERVER_HOST="${1:-${SERVER_IP:-}}"
-if [ -z "$SERVER_HOST" ]; then
-  echo "正在自动获取公网 IPv4..."
-  # 优先 IPv4(方便绑定域名、拼 WebSocket 地址)；拿不到再回退到默认线路
-  SERVER_HOST="$(curl -4 -s --max-time 10 ifconfig.me || curl -s --max-time 10 ifconfig.me || true)"
+if [ -n "${WS_URL:-}" ]; then
+  echo "使用指定的 WebSocket 地址: ${WS_URL}"
+  SERVER_HOST="${1:-${SERVER_IP:-}}"
+else
+  SERVER_HOST="${1:-${SERVER_IP:-}}"
+  if [ -z "$SERVER_HOST" ]; then
+    echo "正在自动获取公网 IPv4..."
+    # 优先 IPv4(方便绑定域名、拼 WebSocket 地址)；拿不到再回退到默认线路
+    SERVER_HOST="$(curl -4 -s --max-time 10 ifconfig.me || curl -s --max-time 10 ifconfig.me || true)"
+  fi
+  if [ -z "$SERVER_HOST" ]; then
+    echo "❌ 无法自动获取公网 IP，请手动指定: bash deploy.sh 你的服务器IP"
+    exit 1
+  fi
+  WS_URL="ws://${SERVER_HOST}:${GAME_PORT}"
 fi
-if [ -z "$SERVER_HOST" ]; then
-  echo "❌ 无法自动获取公网 IP，请手动指定: bash deploy.sh 你的服务器IP"
-  exit 1
-fi
-WS_URL="ws://${SERVER_HOST}:${GAME_PORT}"
 # docker compose 会自动读取项目目录下的 .env
 cat > .env <<EOF
 VITE_GAME_SERVER_URL=${WS_URL}
@@ -63,8 +71,14 @@ docker compose ps
 
 echo ""
 echo "✅ 部署完成！"
-echo "🌐 游戏地址: http://${SERVER_HOST}:${WEB_PORT}"
-echo "🎲 游戏服务: ${WS_URL}"
+echo "🎲 WebSocket: ${WS_URL}"
+if [[ "${WS_URL}" == wss://* ]]; then
+  _domain="${WS_URL#wss://}"
+  _domain="${_domain%%/*}"
+  echo "🌐 游戏地址(域名+HTTPS): https://${_domain}"
+elif [ -n "${SERVER_HOST:-}" ]; then
+  echo "🌐 游戏地址: http://${SERVER_HOST}:${WEB_PORT}"
+fi
 echo ""
 echo "查看日志: docker compose logs -f"
 echo "停止服务: docker compose down"
