@@ -4,7 +4,7 @@ services:
     container_name: feiqi-server
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "${GAME_PORT:-3001}:3001"
     environment:
       - PORT=3001
 
@@ -19,6 +19,6 @@ services:
     container_name: feiqi-web
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "${WEB_PORT:-8080}:80"
     depends_on:
       - game-server

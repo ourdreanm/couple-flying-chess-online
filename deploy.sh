@@ -10,8 +10,14 @@
 #   bash deploy.sh 1.2.3.4
 #   SERVER_IP=1.2.3.4 bash deploy.sh
 #
+# 可选：换端口（默认网页 8080，游戏服务 3001）
+#   WEB_PORT=80 GAME_PORT=4000 bash deploy.sh 1.2.3.4
+#
 set -euo pipefail
 cd "$(dirname "$0")"
+
+WEB_PORT="${WEB_PORT:-8080}"
+GAME_PORT="${GAME_PORT:-3001}"
 
 echo "=== 1/4 检查 Docker ==="
 if ! command -v docker >/dev/null 2>&1; then
@@ -36,10 +42,16 @@ if [ -z "$SERVER_HOST" ]; then
   echo "❌ 无法自动获取公网 IP，请手动指定: bash deploy.sh 你的服务器IP"
   exit 1
 fi
-WS_URL="ws://${SERVER_HOST}:3001"
+WS_URL="ws://${SERVER_HOST}:${GAME_PORT}"
 # docker compose 会自动读取项目目录下的 .env
-echo "VITE_GAME_SERVER_URL=${WS_URL}" > .env
+cat > .env <<EOF
+VITE_GAME_SERVER_URL=${WS_URL}
+WEB_PORT=${WEB_PORT}
+GAME_PORT=${GAME_PORT}
+EOF
 echo "服务器: ${SERVER_HOST}"
+echo "网页端口: ${WEB_PORT}"
+echo "游戏服务端口: ${GAME_PORT}"
 echo "WebSocket: ${WS_URL}"
 
 echo "=== 3/4 构建并启动 ==="
@@ -51,12 +63,12 @@ docker compose ps
 
 echo ""
 echo "✅ 部署完成！"
-echo "🌐 游戏地址: http://${SERVER_HOST}:8080"
+echo "🌐 游戏地址: http://${SERVER_HOST}:${WEB_PORT}"
 echo "🎲 游戏服务: ${WS_URL}"
 echo ""
 echo "查看日志: docker compose logs -f"
 echo "停止服务: docker compose down"
 echo "更新代码后重新部署: git pull && bash deploy.sh ${SERVER_HOST}"
 echo ""
-echo "注意: 云服务器安全组/防火墙需放行 8080 和 3001 端口(TCP)。"
+echo "注意: 云服务器安全组/防火墙需放行 ${WEB_PORT} 和 ${GAME_PORT} 端口(TCP)。"
 echo "如需域名+HTTPS，请看 DEPLOY.md 的 nginx 配置，把 .env 改为 wss://你的域名/ws 后重跑本脚本。"
