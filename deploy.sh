@@ -28,8 +28,9 @@ echo "Docker 就绪: $(docker --version)"
 echo "=== 2/4 确定服务器地址 ==="
 SERVER_HOST="${1:-${SERVER_IP:-}}"
 if [ -z "$SERVER_HOST" ]; then
-  echo "正在自动获取公网 IP..."
-  SERVER_HOST="$(curl -s --max-time 10 ifconfig.me || true)"
+  echo "正在自动获取公网 IPv4..."
+  # 优先 IPv4(方便绑定域名、拼 WebSocket 地址)；拿不到再回退到默认线路
+  SERVER_HOST="$(curl -4 -s --max-time 10 ifconfig.me || curl -s --max-time 10 ifconfig.me || true)"
 fi
 if [ -z "$SERVER_HOST" ]; then
   echo "❌ 无法自动获取公网 IP，请手动指定: bash deploy.sh 你的服务器IP"
