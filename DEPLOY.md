@@ -83,8 +83,8 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # WebSocket 反向代理：浏览器连 wss://game.你的域名.com/ws
-    location /ws/ {
+    # WebSocket 反向代理：浏览器连 wss://game.你的域名.com/ws（注意 location 写 /ws，不要写 /ws/，否则 /ws 路径匹配不上）
+    location /ws {
         proxy_pass http://127.0.0.1:3001/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
